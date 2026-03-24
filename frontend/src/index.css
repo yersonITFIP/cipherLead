@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color: #0f172a;
+  background: #f6efe4;
+  --font-body: 'Manrope', Aptos, 'Segoe UI Variable', Candara, sans-serif;
+  --font-heading: 'Sora', 'Segoe UI Variable', Aptos, sans-serif;
+  font-family: var(--font-body);
+}
+
+body {
+  margin: 0;
+  color: #0f172a;
+  background: #f6efe4;
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.05;
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+p {
+  line-height: 1.6;
+}

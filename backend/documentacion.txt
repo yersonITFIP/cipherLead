@@ -1,0 +1,287 @@
+DOCUMENTACION DEL PROYECTO - LOGIN TRADICIONAL + 2FA TOTP
+
+Fecha de referencia:
+- Marzo 2026
+
+Resumen general:
+- Se elimino el flujo activo de OAuth con Microsoft.
+- La autenticacion principal ahora es tradicional: correo + contrasena.
+- El segundo factor es TOTP de 6 digitos.
+- El TOTP es compatible con Microsoft Authenticator, Google Authenticator y apps similares.
+- El backend protege rutas con middleware JWT + verificacion de sesion.
+
+ARQUITECTURA ACTUAL
+
+Backend:
+- backend/index.js
+- backend/.env.example
+- backend/sql/microsoft_auth_schema.sql
+- backend/sql/totp_2fa_migration.sql
+- backend/documentacion.txt
+
+Frontend:
+- frontend/src/App.jsx
+- frontend/src/App.css
+- frontend/src/index.css
+
+BASE DE DATOS
+
+Base usada:
+- diario
+
+Tablas activas relevantes:
+- users: usuarios de la aplicacion.
+- user_sessions: sesiones activas con JWT.
+- user_totp: secretos y estado de 2FA TOTP.
+- login_audit: tabla disponible para auditoria futura.
+
+Nota:
+- La tabla oauth_accounts puede quedar en bases antiguas, pero ya no es usada por el codigo actual.
+
+CAMBIOS EN USERS
+
+La tabla users ahora requiere soporte para contrasena:
+- password_hash VARCHAR(255)
+
+El backend intenta agregar esta columna automaticamente al iniciar si todavia no existe.
+
+AUTENTICACION PRINCIPAL
+
+Nuevo flujo de acceso:
+1. El usuario se registra con correo, contrasena y nombre visible.
+2. El usuario inicia sesion con correo y contrasena.
+3. Si no tiene 2FA activo, el backend crea sesion inmediatamente.
+4. Si tiene 2FA activo, el backend devuelve un challenge temporal.
+5. El frontend pide el codigo de 6 digitos.
+6. El backend valida el TOTP y recien ahi crea la sesion final.
+
+RUTAS BACKEND IMPLEMENTADAS
+
+Registro y login:
+- POST /auth/register
+  Crea una cuenta local nueva.
+
+- POST /auth/login
+  Valida correo y contrasena.
+  Si 2FA esta activo, devuelve:
+  - requiresTwoFactor
+  - challengeToken
+  - user
+  Si 2FA no esta activo, devuelve:
+  - token
+  - user
+
+Segundo factor TOTP:
+- POST /auth/2fa/verify
+  Valida el challengeToken y el codigo TOTP.
+  Si es correcto, devuelve el token de sesion final.
+
+- GET /auth/2fa/status
+  Devuelve si el usuario tiene 2FA activo o configuracion pendiente.
+
+- POST /auth/2fa/setup
+  Genera un secreto temporal y devuelve:
+  - manualEntryKey
+  - otpAuthUrl
+  - qrCodeDataUrl
+
+- POST /auth/2fa/enable
+  Activa 2FA confirmando el primer codigo de 6 digitos.
+
+- POST /auth/2fa/disable
+  Desactiva 2FA validando un codigo TOTP vigente.
+
+Sesion y rutas protegidas:
+- GET /auth/me
+  Devuelve el perfil del usuario autenticado.
+
+- POST /auth/logout
+  Revoca la sesion activa.
+
+- GET /protected/summary
+  Ejemplo de ruta protegida por middleware.
+
+Utilidades:
+- GET /health/db
+  Verifica conexion a MySQL.
+
+- GET /users
+  Lista usuarios, protegida por middleware.
+
+MIDDLEWARE DE PROTECCION
+
+La proteccion se hace con JWT + tabla user_sessions:
+- El cliente envia Bearer token.
+- El backend valida la firma JWT.
+- El backend verifica que la sesion siga vigente en user_sessions.
+- Si la sesion esta revocada o expirada, rechaza el acceso.
+
+Esto protege rutas como:
+- /auth/me
+- /auth/logout
+- /auth/2fa/status
+- /auth/2fa/setup
+- /auth/2fa/enable
+- /auth/2fa/disable
+- /protected/summary
+- /users
+
+2FA TOTP DE 6 DIGITOS
+
+Descripcion:
+- Usa el estandar TOTP.
+- No depende de Azure MFA.
+- Es compatible con Microsoft Authenticator como app de codigos.
+
+Librerias usadas:
+- otplib
+- qrcode
+
+Flujo de activacion de 2FA:
+1. Usuario inicia sesion con correo y contrasena.
+2. Desde la interfaz elige configurar 2FA.
+3. Backend genera pending_secret.
+4. Frontend muestra QR y clave manual.
+5. Usuario escanea con Microsoft Authenticator o similar.
+6. Usuario escribe el codigo de 6 digitos.
+7. Backend valida y activa el 2FA.
+
+Flujo de login con 2FA activo:
+1. Usuario envia correo y contrasena a /auth/login.
+2. Backend valida credenciales.
+3. Backend detecta 2FA activo y responde con challengeToken.
+4. Frontend muestra formulario para codigo TOTP.
+5. Frontend envia codigo a /auth/2fa/verify.
+6. Backend valida y crea sesion final.
+
+JWT Y SESIONES
+
+Tipos de token:
+- Token de sesion final:
+  Permite acceder a rutas protegidas.
+
+- Token de challenge 2FA:
+  Solo sirve temporalmente entre el primer factor y el segundo factor.
+
+Datos guardados en user_sessions:
+- id de sesion
+- user_id
+- ip_address
+- user_agent
+- created_at
+- expires_at
+- revoked_at
+
+FRONTEND IMPLEMENTADO
+
+La interfaz React ahora incluye:
+- Formulario de iniciar sesion.
+- Formulario de registro.
+- Pantalla para challenge 2FA.
+- Estado de sesion activa.
+- Boton de logout.
+- Configuracion de QR para 2FA.
+- Activacion y desactivacion de 2FA.
+- Vista de una ruta protegida de ejemplo.
+
+Estado principal del frontend:
+- mode
+- token
+- user
+- profile
+- protectedSummary
+- twoFactorStatus
+- pendingChallenge
+- setupData
+- setupCode
+- challengeCode
+- disableCode
+- loginForm
+- registerForm
+- loading
+- working
+- message
+- error
+
+VARIABLES DE ENTORNO IMPORTANTES
+
+Backend:
+- PORT
+- FRONTEND_URL
+- DB_HOST
+- DB_USER
+- DB_PASSWORD
+- DB_NAME
+- JWT_SECRET
+- JWT_EXPIRES_IN
+- PASSWORD_SALT_ROUNDS
+- TWO_FACTOR_CHALLENGE_EXPIRES_IN
+- TOTP_ISSUER
+
+Dependencias backend usadas:
+- express
+- mysql2
+- cors
+- dotenv
+- jsonwebtoken
+- bcryptjs
+- otplib
+- qrcode
+
+ARCHIVOS SQL
+
+microsoft_auth_schema.sql:
+- Ahora representa el esquema base actual con login tradicional y 2FA.
+- Incluye users, user_sessions, user_totp y login_audit.
+
+totp_2fa_migration.sql:
+- Agrega password_hash a users.
+- Crea user_totp si no existe.
+
+VALIDACIONES REALIZADAS
+
+Se valido lo siguiente:
+- Backend levanta correctamente con node index.js.
+- /health/db responde con conexion activa.
+- Registro de usuario local exitoso.
+- Login tradicional exitoso.
+- Ruta protegida /protected/summary accesible solo con token valido.
+- Frontend compila correctamente con npm run build.
+
+COMO EJECUTAR EL PROYECTO
+
+Backend:
+1. Abrir terminal en backend.
+2. Ejecutar: node index.js
+
+Frontend:
+1. Abrir terminal en frontend.
+2. Ejecutar: npm run dev
+
+Prueba funcional sugerida:
+1. Abrir http://localhost:5173
+2. Crear una cuenta nueva.
+3. Iniciar sesion con correo y contrasena.
+4. Configurar 2FA desde la interfaz.
+5. Escanear QR con Microsoft Authenticator.
+6. Confirmar activacion con codigo de 6 digitos.
+7. Cerrar sesion.
+8. Iniciar sesion otra vez.
+9. Introducir el codigo TOTP cuando lo pida.
+
+OBSERVACIONES IMPORTANTES
+
+- El backend ya no depende de Microsoft OAuth.
+- Microsoft Authenticator se usa solo como app TOTP, no como proveedor OAuth.
+- Las cuentas creadas anteriormente por OAuth pueden existir en la base, pero no participan en el flujo nuevo si no tienen password_hash.
+- Si necesitas reutilizar una cuenta vieja, debes asignarle una contrasena mediante migracion o recrearla como cuenta local.
+
+PENDIENTES OPCIONALES
+
+- Agregar recuperacion de contrasena.
+- Agregar codigos de respaldo para 2FA.
+- Agregar rate limiting a /auth/login y /auth/2fa/verify.
+- Migrar JWT de localStorage a cookie HttpOnly.
+- Crear dashboard privado completo con mas rutas protegidas.
+
+FIN DE DOCUMENTACION
