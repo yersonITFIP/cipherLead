@@ -4,6 +4,7 @@ import { readSession } from '../../../utils/sessionStorage'
 import { fetchNotesBySubject, createNote, updateNote, deleteNote } from '../../../utils/notesApi'
 import NoteModal from '../../../components/NoteModal'
 import IconSelector, { getIconComponent } from '../../../components/IconSelector'
+import { deleteAlert, successAlert, errorAlert } from '../../../utils/swal'
 
 function SubjectsSection({
   subjects,
@@ -117,9 +118,8 @@ function SubjectsSection({
   }
 
   async function handleDeleteNote(noteId) {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta nota?')) {
-      return
-    }
+    const result = await deleteAlert('esta nota')
+    if (!result.isConfirmed) return
 
     try {
       setLoadingNotes(true)
@@ -127,6 +127,7 @@ function SubjectsSection({
       const { token } = readSession()
       await deleteNote(token, noteId)
       setNotes((current) => current.filter(n => n.id !== noteId))
+      successAlert('Nota eliminada')
     } catch (error) {
       console.error('Error al eliminar nota:', error)
       setNotesError(error.message)
@@ -145,26 +146,8 @@ function SubjectsSection({
           <div className="panel-header-with-icon" style={{ marginBottom: '1rem' }}>
             <button
               onClick={handleBackToSubjects}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                padding: '0.5rem',
-                cursor: 'pointer',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                color: 'var(--text-secondary)',
-                transition: 'all 0.2s',
-                marginRight: '0.5rem'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--hover-background)'
-                e.currentTarget.style.color = 'var(--text-primary)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.color = 'var(--text-secondary)'
-              }}
+              className="back-button"
+              style={{ marginRight: '0.5rem' }}
               aria-label="Volver a materias"
             >
               <ChevronLeft size={20} />
@@ -172,15 +155,15 @@ function SubjectsSection({
             <SubjectIcon size={22} className="panel-icon" />
             <h3>{selectedSubject.title}</h3>
           </div>
-          
+
           {selectedSubject.description && (
-            <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--ui-muted)' }}>
               {selectedSubject.description}
             </p>
           )}
 
-          <button 
-            className="action-button primary-button" 
+          <button
+            className="action-button primary-button"
             onClick={handleOpenCreateModal}
             disabled={loadingNotes}
             style={{ marginBottom: '1.5rem' }}
@@ -190,16 +173,7 @@ function SubjectsSection({
           </button>
 
           {notesError && (
-            <div 
-              style={{
-                marginBottom: '1rem',
-                padding: '0.75rem',
-                background: 'rgba(239, 68, 68, 0.1)',
-                color: '#ef4444',
-                borderRadius: '0.375rem',
-                fontSize: '0.875rem'
-              }}
-            >
+            <div className="error-inline">
               {notesError}
             </div>
           )}
@@ -257,49 +231,15 @@ function SubjectsSection({
                         disabled={loadingNotes}
                         title="Editar nota"
                         aria-label={`Editar nota ${note.title}`}
-                        style={{
-                          padding: '0.5rem',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#6b7280',
-                          borderRadius: '0.375rem',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
-                          e.currentTarget.style.color = '#3b82f6'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.color = '#6b7280'
-                        }}
                       >
                         <Edit size={16} />
                       </button>
                       <button
-                        className="note-action-button"
+                        className="note-action-button danger"
                         onClick={() => handleDeleteNote(note.id)}
                         disabled={loadingNotes}
                         title="Eliminar nota"
                         aria-label={`Eliminar nota ${note.title}`}
-                        style={{
-                          padding: '0.5rem',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#6b7280',
-                          borderRadius: '0.375rem',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
-                          e.currentTarget.style.color = '#ef4444'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent'
-                          e.currentTarget.style.color = '#6b7280'
-                        }}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -371,7 +311,7 @@ function SubjectsSection({
           disabled={loading}
         />
         {error && (
-          <div className="error-message" style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '0.375rem', fontSize: '0.875rem' }}>
+          <div className="error-inline">
             {error}
           </div>
         )}
@@ -416,24 +356,6 @@ function SubjectsSection({
                   disabled={loading}
                   title="Eliminar materia"
                   aria-label={`Eliminar materia ${subject.title}`}
-                  style={{
-                    marginLeft: 'auto',
-                    padding: '0.5rem',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#6b7280',
-                    borderRadius: '0.375rem',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
-                    e.currentTarget.style.color = '#ef4444'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#6b7280'
-                  }}
                 >
                   <Trash2 size={16} />
                 </button>

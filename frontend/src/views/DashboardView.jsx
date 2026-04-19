@@ -10,6 +10,7 @@ import SubjectsSection from './dashboard/sections/SubjectsSection'
 import { fetchSubjects, createSubject, deleteSubject } from '../utils/subjectsApi'
 import { readSession } from '../utils/sessionStorage'
 import ThemeToggleButton from '../components/ThemeToggleButton'
+import { deleteAlert, logoutAlert, successAlert, errorAlert } from '../utils/swal'
 
 const DISPLAY_NAME_STORAGE_KEY = 'diario-display-name'
 
@@ -129,19 +130,19 @@ function DashboardView({
   }
 
   async function handleDeleteSubject(subjectId) {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta materia?')) {
-      return
-    }
+    const result = await deleteAlert('esta materia')
+    if (!result.isConfirmed) return
 
     try {
       setLoadingSubjects(true)
       setSubjectError('')
       const { token } = readSession()
       await deleteSubject(token, subjectId)
-      
       setSubjects((current) => current.filter(s => s.id !== subjectId))
+      successAlert('Materia eliminada')
     } catch (error) {
       console.error('Error al eliminar materia:', error)
+      errorAlert('Error', 'No se pudo eliminar la materia')
       setSubjectError(error.message)
     } finally {
       setLoadingSubjects(false)
@@ -162,7 +163,7 @@ function DashboardView({
       <aside className="dashboard-nav-sector" aria-label="Navegacion del dashboard">
         <div className="sidebar-header">
           <div className="dashboard-brand" aria-label="Marca de CipherLeaf">
-            <img src="/logo.png" alt="Logo CipherLeaf" width="32" height="32" />
+            <img src="/logo.jpeg" alt="Logo CipherLeaf" width="32" height="32" className="logo-circle" />
             <span className="sidebar-label">CipherLeaf</span>
           </div>
         </div>
@@ -192,13 +193,6 @@ function DashboardView({
             })}
           </ul>
         </nav>
-
-        <div className="sidebar-footer">
-          <button className="action-button secondary nav-logout-button" disabled={working} onClick={onLogout} title={sidebarCollapsed ? "Cerrar sesion" : undefined}>
-            <LogOut size={18} className="lucide-icon" />
-            <span className="sidebar-label">Cerrar sesion</span>
-          </button>
-        </div>
       </aside>
 
       <main className="dashboard-main-area">
@@ -262,7 +256,10 @@ function DashboardView({
                     )
                   })}
                   <div className="menu-divider"></div>
-                  <button className="user-hub-item logout-item" onClick={onLogout}>
+                  <button className="user-hub-item logout-item" onClick={async () => {
+                    const result = await logoutAlert()
+                    if (result.isConfirmed) onLogout()
+                  }}>
                     <LogOut size={18} className="lucide-icon" />
                     <span>Cerrar sesion</span>
                   </button>
@@ -342,7 +339,7 @@ function DashboardView({
         <footer className="dashboard-footer">
           <div className="footer-content">
             <div className="footer-brand">
-              <img src="/logo.png" alt="CipherLeaf" className="footer-brand-logo" />
+              <img src="/logo.jpeg" alt="CipherLeaf" className="footer-brand-logo logo-circle" />
               <span className="footer-brand-name">CipherLeaf</span>
             </div>
             <span className="footer-copyright">

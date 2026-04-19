@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+import { API_BASE_URL } from '../config/api'
 
 export async function createSubject(token, title, description, icon = 'Book') {
   const response = await fetch(`${API_BASE_URL}/subjects`, {

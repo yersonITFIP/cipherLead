@@ -21,6 +21,7 @@ import {
   updatePasswordEntry,
   deletePasswordEntry
 } from '../../../utils/passwordsApi'
+import { deleteAlert, successAlert, errorAlert, toast } from '../../../utils/swal'
 
 const INITIAL_FORM = {
   title: '',
@@ -186,9 +187,8 @@ function PasswordsSection() {
   }
 
   async function handleDelete(entry) {
-    if (!window.confirm(`¿Eliminar la entrada "${entry.title}"? Esta acción no se puede deshacer.`)) {
-      return
-    }
+    const result = await deleteAlert(`la entrada "${entry.title}"`)
+    if (!result.isConfirmed) return
 
     try {
       setLoading(true)
@@ -199,7 +199,7 @@ function PasswordsSection() {
       if (editingId === entry.id) {
         resetForm()
       }
-      setFeedback('Entrada eliminada correctamente')
+      successAlert('Entrada eliminada')
     } catch (deleteError) {
       console.error('Error al eliminar password:', deleteError)
       setError(deleteError.message)
@@ -234,9 +234,9 @@ function PasswordsSection() {
     try {
       await navigator.clipboard.writeText(password)
       setCopiedEntryId(entryId || 'form')
-      setFeedback('Contraseña copiada al portapapeles')
+      toast('Contraseña copiada', 'success')
     } catch (clipboardError) {
-      setError('No se pudo copiar la contraseña. Verifica permisos del navegador.')
+      errorAlert('Error', 'No se pudo copiar la contraseña')
     }
   }
 

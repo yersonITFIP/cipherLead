@@ -1,43 +1,84 @@
-# Dependencias
+# =============================================
+# Dependencies
+# =============================================
 node_modules/
 frontend/node_modules/
 backend/node_modules/
 
+# =============================================
 # Build outputs
+# =============================================
 frontend/dist/
 frontend/dist-ssr/
 backend/dist/
 coverage/
+*.egg-info/
 
-# Variables de entorno y secretos
+# =============================================
+# Environment variables and secrets
+# NEVER commit these files
+# =============================================
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
 backend/.env
 frontend/.env
-frontend/.env.*
 backend/.env.*
+frontend/.env.*
 !backend/.env.example
+!frontend/.env.example
 
+# =============================================
 # Logs
+# =============================================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
+# =============================================
+# Testing
+# =============================================
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+__snapshots__/
+
+# =============================================
 # OS / IDE
+# =============================================
 .DS_Store
 Thumbs.db
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.kite/
 
-# Otros
+# =============================================
+# Temporary files
+# =============================================
+*.tmp
+*.temp
+.cache/
 *.local
+
+# =============================================
+# Sensitive files
+# =============================================
+*.pem
+*.key
+credentials.json
+service-account.json

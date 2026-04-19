@@ -1,5 +1,6 @@
 import { ShieldCheck, Lock, Unlock } from 'lucide-react'
 import OtpCodeInput from '../../../components/OtpCodeInput'
+import { disable2FAAlert } from '../../../utils/swal'
 
 function SecuritySection({
   working,
@@ -84,9 +85,10 @@ function SecuritySection({
       {twoFactorStatus.enabled ? (
         <form
           className="totp-disable-box totp-form"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
-            onDisableTwoFactor()
+            const result = await disable2FAAlert()
+            if (result.isConfirmed) onDisableTwoFactor()
           }}
         >
           <div className="security-status-active">

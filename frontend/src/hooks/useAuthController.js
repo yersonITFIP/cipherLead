@@ -7,8 +7,13 @@ import {
   readPendingChallenge,
   readSession
 } from '../utils/sessionStorage'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+import { API_BASE_URL } from '../config/api'
+import {
+  validateLoginForm,
+  validateRegisterForm,
+  sanitizeString,
+  detectInjectionAttempt
+} from '../utils/validation'
 
 function defaultTwoFactorStatus() {
   return { enabled: false, hasPendingSetup: false }
@@ -39,7 +44,7 @@ function useAuthController() {
   const [error, setError] = useState('')
 
   const fetchJson = useCallback(async (path, options = {}) => {
-    const response = await fetch(`${API_URL}${path}`, options)
+    const response = await fetch(`${API_BASE_URL}${path}`, options)
     const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
@@ -117,23 +122,32 @@ function useAuthController() {
     setMessage('')
 
     try {
-      if (registerForm.password !== registerForm.confirmPassword) {
-        throw new Error('Las contrasenas no coinciden')
+      // Validate and sanitize form data
+      const validation = validateRegisterForm(registerForm)
+
+      if (!validation.isValid) {
+        const firstError = Object.values(validation.errors)[0]
+        throw new Error(firstError)
+      }
+
+      // Extra check for injection attempts
+      if (detectInjectionAttempt(validation.sanitizedData.displayName)) {
+        throw new Error('Caracteres invalidos detectados en el nombre')
       }
 
       await fetchJson('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          displayName: registerForm.displayName,
-          email: registerForm.email,
-          password: registerForm.password
+          displayName: validation.sanitizedData.displayName,
+          email: validation.sanitizedData.email,
+          password: validation.sanitizedData.password
         })
       })
 
       setMessage('Cuenta creada. Ahora puedes iniciar sesion.')
       setMode('login')
-      setLoginForm({ email: registerForm.email, password: '' })
+      setLoginForm({ email: validation.sanitizedData.email, password: '' })
       setRegisterForm({ displayName: '', email: '', password: '', confirmPassword: '' })
     } catch (registerError) {
       setError(registerError.message || 'No se pudo registrar la cuenta')
@@ -148,10 +162,21 @@ function useAuthController() {
     setMessage('')
 
     try {
+      // Validate and sanitize form data
+      const validation = validateLoginForm(loginForm)
+
+      if (!validation.isValid) {
+        const firstError = Object.values(validation.errors)[0]
+        throw new Error(firstError)
+      }
+
       const data = await fetchJson('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginForm)
+        body: JSON.stringify({
+          email: validation.sanitizedData.email,
+          password: validation.sanitizedData.password
+        })
       })
 
       if (data.requiresTwoFactor) {
@@ -321,12 +346,16 @@ function useAuthController() {
   }
 
   function updateLoginField(field, value) {
-    setLoginForm((current) => ({ ...current, [field]: value }))
+    // Sanitize input immediately
+    const sanitized = field === 'email' ? sanitizeString(value).toLowerCase() : sanitizeString(value)
+    setLoginForm((current) => ({ ...current, [field]: sanitized }))
     if (error) setError('')
   }
 
   function updateRegisterField(field, value) {
-    setRegisterForm((current) => ({ ...current, [field]: value }))
+    // Sanitize input immediately
+    const sanitized = field === 'email' ? sanitizeString(value).toLowerCase() : sanitizeString(value)
+    setRegisterForm((current) => ({ ...current, [field]: sanitized }))
     if (error) setError('')
   }
 
